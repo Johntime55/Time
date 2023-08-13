@@ -1,0 +1,186 @@
+Update book
+private static bool UpdateBookInDb(Library updatedBook, Logger logger)
+{
+    try
+    {
+        var db = new I_CoposEntities(); // Corectat denumirea clasei I_CoposEntities
+        var existingBook = db.Libraries.FirstOrDefault(b => b.Id == updatedBook.Isbn13);
+        
+        if (existingBook != null)
+        {
+            existingBook.BookName = updatedBook.BookName;
+            existingBook.Author = updatedBook.Author;
+            existingBook.Publisher = updatedBook.Publisher;
+            existingBook.YearPublished = updatedBook.YearPublished;
+            existingBook.CoverImage = updatedBook.CoverImage;
+            existingBook.QtyAvailable = updatedBook.QtyAvailable;
+            
+            db.SaveChanges();
+            logger.Log($"Book updated successfully for ISBN13: {updatedBook.Isbn13}");
+            return true;
+        }
+        else
+        {
+            Console.WriteLine($"Book with ISBN13: {updatedBook.Isbn13} not found.");
+            logger.Log($"Book with ISBN13: {updatedBook.Isbn13} not found.");
+            return false;
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.Log($"Error updating book: {ex.Message}");
+        return false;
+    }
+}
+
+
+case "3":
+    // Implement code for updating existing book
+    Console.WriteLine("Enter ISBN13 of book to update:");
+    var isbn13ToUpdate = Console.ReadLine();
+    
+    var updatedBook = new Library(); // Aici trebuie să inițializați un obiect Library cu noile informații
+    
+    if (UpdateBookInDb(updatedBook, logger))
+    {
+        Console.WriteLine("Book updated successfully.");
+    }
+    break;
+
+
+private static bool BulkInsertBooks(List<Library> books, Logger logger)
+{
+    try
+    {
+        using (var db = new I_CoposEntities()) // Corectat denumirea clasei I_CoposEntities
+        {
+            db.Libraries.AddRange(books);
+            db.SaveChanges();
+        }
+        logger.Log($"Bulk insert completed for {books.Count} books.");
+        return true;
+    }
+    catch (Exception ex)
+    {
+        logger.Log($"Error during bulk insert: {ex.Message}");
+        return false;
+    }
+}
+
+case "1":
+    if (!IsFileAvailable(filepath))
+    {
+        Console.WriteLine("File is currently in use. Please try again later.");
+        break;
+    }
+
+    var importData = ParseCsv(filepath);
+    var imported = BulkInsertBooks(importData, logger);
+
+    if (imported)
+    {
+        logger.Log("Bulk insert completed");
+    }
+    break;
+
+
+clasa logger
+
+using System;
+using System.IO;
+
+namespace OneTimeFileImporterSample.Data
+{
+    internal class Logger
+    {
+        private readonly string logFilePath;
+
+        public Logger(string logFilePath)
+        {
+            this.logFilePath = logFilePath;
+        }
+
+        public void Log(string message) // Corectat Log cu 'L' mare
+        {
+            try
+            {
+                using (var writer = new StreamWriter(logFilePath, true))
+                {
+                    writer.WriteLine($"{DateTime.Now} - {message}"); // Corectat DataTime cu DateTime
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error while logging: {ex.Message}");
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+Meniul
+namespace OneTimeFileImporterSample
+{
+    internal class Program
+    {
+        private static Logger logger; // Declarați logger ca o variabilă globală
+
+        private static void Main(string[] args)
+        {
+            logger = new Logger("log.txt"); // Inițializați logger
+
+            Console.WriteLine("Application starting");
+
+            const string filepath = ""; // Completați calea către fișierul CSV
+
+            while (true) // Buclă "while(true)" pentru meniu de selecție repetitiv
+            {
+                if (!IsFileAvailable(filepath))
+                {
+                    Console.WriteLine("File is currently in use. Please try again.");
+                    logger.Log("File is currently in use. Please try again."); // Înregistrare în jurnal
+                    Console.ReadLine();
+                    continue; // Continuă bucla pentru a aștepta până când fișierul devine disponibil
+                }
+
+                Console.WriteLine("Select Method to parse Csv file:\n 1 ParseCsv \n 2 Parse with CsvHelper \n 3 Update Book Fields \n 4 Exit\n");
+                var selection = Console.ReadLine();
+
+                switch (selection)
+                {
+                    case "1":
+                        var importdata = ParseCsv(filepath);
+                        var imported = ImportFileToDb(importdata);
+                        if (imported)
+                        {
+                            logger.Log("Import completed");
+                        }
+                        break;
+                    case "2":
+                        var importData = ParseFileUsingCsvReader(filepath);
+                        var importedCsv = ImportFileToDb(importData);
+                        if (importedCsv)
+                        {
+                            logger.Log("Import completed");
+                        }
+                        break;
+                    case "3":
+                        UpdateBookFields();
+                        break;
+                    case "4":
+                        Console.WriteLine("Exiting the application.");
+                        return; // Ieșirea din aplicație
+                    default:
+                        Console.WriteLine("Invalid selection");
+                        logger.Log("Invalid selection");
+                        break;
+                }
+            }
+        }
+    }
+}
