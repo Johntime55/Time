@@ -1,0 +1,50 @@
+private static List<Library> ParseFileUsingCsvReader(string filepath)
+{
+    var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+    {
+        IgnoreBlankLines = true,
+        MissingFieldFound = null,
+    };
+    var records = new List<Library>();
+    int attempts = 0;
+
+    while (attempts < 3)
+    {
+        if (!IsFileAvailable(filepath))
+        {
+            Console.WriteLine("File is currently in use. Press any key to continue.");
+            Console.ReadKey();
+            attempts++;
+            continue;
+        }
+
+        try
+        {
+            using (var sr = new StreamReader(filepath))
+            {
+                using (var csv = new CsvReader(sr, config))
+                {
+                    while (csv.Read())
+                    {
+                        var row = csv.GetRecord<Library>();
+                        records.Add(row);
+                    }
+                }
+            }
+
+            foreach (var book in records)
+            {
+                Console.WriteLine($"id: {book.id}, Author: {book.Author}, ISBN13: {book.Isbn13}, ISBN10: {book.Isbn10}, Publisher: {book.Publisher}");
+            }
+            break; // Ieșiți din bucla while dacă procesarea a fost cu succes
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error while processing file: {ex.Message}");
+            break; // Ieșiți din bucla while dacă a apărut o eroare
+        }
+    }
+
+    return records;
+}
+￼Enter
