@@ -1,0 +1,25 @@
+case "3":
+    // Implementează codul pentru actualizarea cărții existente
+    Console.WriteLine("Enter ISBN13 of book to update:");
+    var isbn13ToUpdate = Console.ReadLine();
+    
+    // Inițializează un obiect Library cu noile informații pentru actualizare
+    var updatedBook = new Library
+    {
+        id = 0, // Setează ID-ul corect al cărții pe care vrei să o actualizezi
+        BookName = "Noul titlu",
+        Author = "Noul autor",
+        Isbn13 = "Noul ISBN13",
+        Isbn10 = "Noul ISBN10",
+        Publisher = "Noul publisher",
+        YearPublished = "Noul an de publicare",
+        CoverImage = "Noua imagine de copertă",
+        QtyAvailable = 0 // Setează cantitatea disponibilă corectă
+    };
+    
+    if (UpdateBookInDb(updatedBook, logger))
+    {
+        Console.WriteLine("Book updated successfully.");
+    }
+    break;
+￼Enter
