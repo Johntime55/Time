@@ -1,0 +1,87 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using CsvHelper;
+using CsvHelper.Configuration;
+using System.Text.RegularExpressions;
+
+namespace OneTimeFileImporterSample
+{
+    public class Program
+    {
+        private static void Main(string[] args)
+        {
+            Console.WriteLine("Application starting");
+
+            const string filepath = @"";
+
+            if (!IsFileAvailable(filepath))
+            {
+                Console.WriteLine("File is currently in use. Please try again");
+                Console.ReadLine();
+                return;
+            }
+
+            var logger = new Logger("log.txt");
+            logger.Log("Application starting");
+
+            bool continueRunning = true;
+
+            do
+            {
+                Console.WriteLine("Select Method to parse Csv file:\n 1 ParseCsv \n 2 Parse with CsvHelper \n 3 Exit\n");
+                var selection = Console.ReadLine();
+
+                switch (selection)
+                {
+                    case "1":
+                        var importData = ParseCsv(filepath);
+                        var imported = ImportFileToDb(importData, logger);
+                        Console.WriteLine(imported);
+                        if (imported)
+                        {
+                            logger.Log("Import completed");
+                        }
+                        break;
+                    case "2":
+                        importData = ParseFileUsingCsvReader(filepath);
+                        imported = ImportFileToDb(importData, logger);
+                        Console.WriteLine(imported);
+                        if (imported)
+                        {
+                            logger.Log("Import completed");
+                        }
+                        break;
+                    case "3":
+                        continueRunning = false;
+                        break;
+                    default:
+                        Console.WriteLine("Invalid selection");
+                        break;
+                }
+
+            } while (continueRunning);
+
+            Console.WriteLine("Exiting...");
+        }
+
+        private static bool IsFileAvailable(string filepath)
+        {
+            try
+            {
+                using (File.Open(filepath, FileMode.Open, FileAccess.Read, FileShare.None))
+                {
+                    return true;
+                }
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+        }
+        
+        // Restul metodelor rămân neschimbate
+    }
+}
+￼Enter
