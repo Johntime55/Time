@@ -1,0 +1,43 @@
+private static List<Library> ParseCsv(string filepath)
+{
+    var fileData = new List<Library>();
+    int attempts = 0;
+
+    while (attempts < 3)
+    {
+        if (!IsFileAvailable(filepath))
+        {
+            Console.WriteLine("File is currently in use. Press any key to continue.");
+            Console.ReadKey();
+            attempts++;
+            continue;
+        }
+
+        try
+        {
+            using (var sr = new StreamReader(filepath))
+            {
+                var line = sr.ReadLine();
+
+                while ((line = sr.ReadLine()) != null)
+                {
+                    // Restul codului pentru parsare
+                }
+            }
+
+            foreach (var book in fileData)
+            {
+                Console.WriteLine($"id: {book.id}, Author: {book.Author}, ISBN13: {book.Isbn13}, ISBN10: {book.Isbn10}, Publisher: {book.Publisher}");
+            }
+            break; // Ieșiți din bucla while dacă procesarea a fost cu succes
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            break; // Ieșiți din bucla while dacă a apărut o eroare
+        }
+    }
+
+    return fileData;
+}
+￼Enter
