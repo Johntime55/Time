@@ -1,0 +1,209 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using CsvHelper;
+using CsvHelper.Configuration;
+using System.Text.RegularExpressions;
+using System.Linq;
+using System.Threading;
+using OneTimeFileImporterSample.Data;
+
+namespace OneTimeFileImporterSample
+{
+    internal class Program
+    {
+        private static void Main(string[] args)
+        {
+            const string filepath = @"C:\Users\user\Desktop\Saptamana 4\books.csv";
+
+            Logger logger = new Logger("log.txt"); // Initializează logger-ul
+
+            if (!IsFileAvailable(filepath))
+            {
+                Console.WriteLine("File is currently in use. Please try again");
+                logger.Log("File is currently in use. Please try again");
+                return;
+            }
+
+            logger.Log("Application starting");
+
+            bool continueRunning = true;
+
+            do
+            {
+                Console.WriteLine("Select Method to parse Csv file:\n 1 ParseCsv \n 2 Parse with CsvHelper \n 3 Exit");
+                var selection = Console.ReadLine();
+
+                switch (selection)
+                {
+                    case "1":
+                        var importData = ParseCsv(filepath); // Parsare CSV utilizând funcția ParseCsv
+                        var imported = ImportFileToDb(importData, logger); // Import în baza de date utilizând funcția ImportFileToDb
+                        if (imported)
+                        {
+                            logger.Log("Import completed successfully");
+                            Thread.Sleep(2000);
+                        }
+                        break;
+                    case "2":
+                        importData = ParseFileUsingCsvReader(filepath); // Parsare CSV utilizând funcția ParseFileUsingCsvReader
+                        imported = ImportFileToDb(importData, logger); // Import în baza de date utilizând funcția ImportFileToDb
+                        if (imported)
+                        {
+                            logger.Log("Import completed successfully");
+                            Thread.Sleep(2000);
+                        }
+                        break;
+                    case "3":
+                        continueRunning = false;
+                        Console.WriteLine("Program Exit");
+                        logger.Log("Program Exit");
+                        break;
+                    default:
+                        Console.WriteLine("Invalid selection, Try Again");
+                        logger.Log("Invalid selection, Try Again");
+                        break;
+                }
+            } while (continueRunning);
+        }
+
+        // Metoda pentru a verifica dacă fișierul este disponibil pentru citire
+        private static bool IsFileAvailable(string filepath)
+        {
+            try
+            {
+                using (File.Open(filepath, FileMode.Open, FileAccess.Read, FileShare.None))
+                {
+                    return true;
+                }
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+        }
+
+        // Metodă pentru a parsa CSV folosind expresii regulate
+        private static List<Library> ParseCsv(string filepath)
+        {
+            var fileData = new List<Library>();
+            try
+            {
+                using (var sr = new StreamReader(filepath))
+                {
+                    var line = sr.ReadLine();
+
+                    while ((line = sr.ReadLine()) != null)
+                    {
+                        var delimited = Regex.Split(line, ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+
+                        var row = new Library
+                        {
+                            id = Convert.ToInt32(delimited[0]),
+                            BookName = delimited[1],
+                            Author = delimited[2],
+                            Isbn13 = delimited[3],
+                            Isbn10 = delimited[4],
+                            Publisher = delimited[5],
+                            YearPublished = delimited[6],
+                            CoverImage = delimited[7],
+                            QtyAvailable = Convert.ToInt32(delimited[8])
+                        };
+                        fileData.Add(row);
+                    }
+                }
+
+                // Afisare date parsate pentru fiecare carte
+                foreach (var book in fileData)
+                {
+                    Console.WriteLine($"id: {book.id}, Author: {book.Author}, ISBN13: {book.Isbn13}, ISBN10: {book.Isbn10}, Publisher: {book.Publisher}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            return fileData;
+        }
+
+        // Metodă pentru a parsa CSV folosind CsvHelper
+        private static List<Library> ParseFileUsingCsvReader(string filepath)
+        {
+            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                IgnoreBlankLines = true,
+                MissingFieldFound = null,
+            };
+            var records = new List<Library>();
+            try
+            {
+                using (var sr = new StreamReader(filepath))
+                {
+                    using (var csv = new CsvReader(sr, config))
+                    {
+                        while (csv.Read())
+                        {
+                            var row = csv.GetRecord<Library>();
+                            records.Add(row);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error while processing file: {ex.Message}");
+            }
+
+            // Afisare date parsate pentru fiecare carte
+            foreach (var book in records)
+            {
+                Console.WriteLine($"id: {book.id}, Author: {book.Author}, ISBN13: {book.Isbn13}, ISBN10: {book.Isbn10}, Publisher: {book.Publisher}");
+            }
+
+            return records;
+        }
+
+        // Metodă pentru a importa datele în baza de date
+        private static bool ImportFileToDb(List<Library> fileData, Logger logger)
+        {
+            bool success = false;
+            try
+            {
+                var db = new I_CoposEntities(); // Corectat denumirea clasei I_CoposEntities
+                bool duplicateMessageLogged = false;
+                int duplicateCount = 0;
+
+                foreach (var item in fileData)
+                {
+                    var existingBook = db.Libraries.FirstOrDefault(b => b.Id == item.Isbn13);
+                    if (existingBook != null)
+                    {
+                        if (!duplicateMessageLogged)
+                        {
+                            logger.Log($"Duplicate entry found for ISBN13: {item.Isbn13}. Removing...");
+                            duplicateMessageLogged = true;
+                        }
+                        db.Libraries.Remove(existingBook);
+                        duplicateCount++;
+                    }
+                    db.Libraries.Add(item);
+                    db.SaveChanges(); // Salvarea în baza de date ar trebui să fie în interiorul buclei pentru fiecare element
+                }
+
+                success = true;
+
+                if (duplicateMessageLogged)
+                {
+                    Console.WriteLine($"Deleted {duplicateCount} duplicate entries");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Log($"Error importing data: {ex.Message}");
+                return false;
+            }
+            return success;
+        }
+    }
+}
