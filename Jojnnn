@@ -1,0 +1,78 @@
+private static void ImportAndHandleChanges(List<Library> fileData, Logger logger)
+{
+    try
+    {
+        var db = new I_CoposEntities();
+
+        int updatedCount = 0;
+        foreach (var newItem in fileData)
+        {
+            var existingItem = db.Libraries.FirstOrDefault(b => b.Id == newItem.Isbn13);
+            if (existingItem != null)
+            {
+                bool hasChanges = false;
+
+                // Verificăm fiecare câmp în parte și actualizăm doar dacă este necesar
+                if (existingItem.BookName != newItem.BookName)
+                {
+                    existingItem.BookName = newItem.BookName;
+                    hasChanges = true;
+                    updatedCount++;
+                }
+                if (existingItem.Author != newItem.Author)
+                {
+                    existingItem.Author = newItem.Author;
+                    hasChanges = true;
+                    updatedCount++;
+                }
+                if (existingItem.Publisher != newItem.Publisher)
+                {
+                    existingItem.Publisher = newItem.Publisher;
+                    hasChanges = true;
+                    updatedCount++;
+                }
+                if (existingItem.YearPublished != newItem.YearPublished)
+                {
+                    existingItem.YearPublished = newItem.YearPublished;
+                    hasChanges = true;
+                    updatedCount++;
+                }
+                if (existingItem.CoverImage != newItem.CoverImage)
+                {
+                    existingItem.CoverImage = newItem.CoverImage;
+                    hasChanges = true;
+                    updatedCount++;
+                }
+                if (existingItem.QtyAvailable != newItem.QtyAvailable)
+                {
+                    existingItem.QtyAvailable = newItem.QtyAvailable;
+                    hasChanges = true;
+                    updatedCount++;
+                }
+
+                if (hasChanges)
+                {
+                    Console.WriteLine($"Changes detected for record with ISBN13: {newItem.Isbn13}. Updated fields.");
+                    logger.Log($"Changes detected for record with ISBN13: {newItem.Isbn13}. Updated fields.");
+                }
+            }
+        }
+
+        if (updatedCount > 0)
+        {
+            db.SaveChanges();
+            Console.WriteLine($"Updated {updatedCount} records.");
+            logger.Log($"Updated {updatedCount} records.");
+        }
+        else
+        {
+            Console.WriteLine("No changes found.");
+            logger.Log("No changes found.");
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.Log($"Error importing data: {ex.Message}");
+    }
+}
+￼Enter
