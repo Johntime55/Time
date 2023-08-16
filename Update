@@ -1,0 +1,60 @@
+int updatedCount = 0;
+foreach (var newItem in fileData)
+{
+    var existingItem = db.Libraries.FirstOrDefault(b => b.Id == newItem.Isbn13);
+    if (existingItem != null)
+    {
+        // Verificăm fiecare câmp în parte și actualizăm doar dacă este necesar
+        if (existingItem.BookName != newItem.BookName)
+        {
+            existingItem.BookName = newItem.BookName;
+            updatedCount++;
+        }
+        if (existingItem.Author != newItem.Author)
+        {
+            existingItem.Author = newItem.Author;
+            updatedCount++;
+        }
+        if (existingItem.Isbn13 != newItem.Isbn13)
+        {
+            existingItem.Isbn13 = newItem.Isbn13;
+            updatedCount++;
+        }
+        if (existingItem.Isbn10 != newItem.Isbn10)
+        {
+            existingItem.Isbn10 = newItem.Isbn10;
+            updatedCount++;
+        }
+        if (existingItem.Publisher != newItem.Publisher)
+        {
+            existingItem.Publisher = newItem.Publisher;
+            updatedCount++;
+        }
+        if (existingItem.YearPublished != newItem.YearPublished)
+        {
+            existingItem.YearPublished = newItem.YearPublished;
+            updatedCount++;
+        }
+        if (existingItem.CoverImage != newItem.CoverImage)
+        {
+            existingItem.CoverImage = newItem.CoverImage;
+            updatedCount++;
+        }
+        if (existingItem.QtyAvailable != newItem.QtyAvailable)
+        {
+            existingItem.QtyAvailable = newItem.QtyAvailable;
+            updatedCount++;
+        }
+    }
+}
+
+if (updatedCount > 0)
+{
+    db.SaveChanges();
+    Console.WriteLine($"Updated {updatedCount} records.");
+}
+else
+{
+    Console.WriteLine("No changes found.");
+}
+￼Enter
