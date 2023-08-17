@@ -1,0 +1,68 @@
+private static List<Library> ParseExcel(string filepath2)
+{
+    var fileData = new List<Library>();
+    
+    try
+    {
+        using (var package = new ExcelPackage(new FileInfo(filepath2)))
+        {
+            var worksheet = package.Workbook.Worksheets[0];
+            var rowCount = worksheet.Dimension.Rows;
+
+            for (int row = 2; row <= rowCount; row++)
+            {
+                var library = new Library
+                {
+                    id = Convert.ToInt32(worksheet.Cells[row, 1].Value),
+                    BookName = worksheet.Cells[row, 2].Value.ToString(),
+                    Author = worksheet.Cells[row, 3].Value.ToString(),
+                    Isbn13 = worksheet.Cells[row, 4].Value.ToString(),
+                    Isbn10 = worksheet.Cells[row, 5].Value.ToString(),
+                    Publisher = worksheet.Cells[row, 6].Value.ToString(),
+                    YearPublished = worksheet.Cells[row, 7].Value.ToString(),
+                    CoverImage = worksheet.Cells[row, 8].Value.ToString(),
+                    QtyAvailable = Convert.ToInt32(worksheet.Cells[row, 9].Value)
+                };
+                fileData.Add(library);
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine(ex.Message);
+    }
+
+    return fileData;
+}
+private static bool ImportExcelToDb(List<Library> importData, Logger logger)
+{
+    var success = false;
+    
+    try
+    {
+        using (var db = new I_CoposEntities()) // Corectați denumirea clasei I_CoposEntities
+        {
+            foreach (var item in importData)
+            {
+                var existingBook = db.Libraries.FirstOrDefault(b => b.Id == item.Isbn13);
+                if (existingBook != null)
+                {
+                    db.Libraries.Remove(existingBook);
+                    Console.WriteLine($"Duplicate entry found for ISBN13: {item.Isbn13}. Removing..");
+                    logger.Log($"Duplicate entry found for ISBN13: {item.Isbn13}. Removing...");
+                }
+                db.Libraries.Add(item);
+                db.SaveChanges();
+            }
+            success = true;
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.Log($"Error importing data: {ex.Message}");
+        return false;
+    }
+    
+    return success;
+}
+￼Enter
