@@ -1,0 +1,514 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using CsvHelper;
+using CsvHelper.Configuration;
+using System.Text.RegularExpressions;
+using System.Linq;
+using System.Threading;
+using OneTimeFileImporterSample.Models;
+using OneTimeFileImporterSample.Models.csv;
+using OneTimeFileImporterSample.Models.excel;
+using ExcelDataReader;
+using System.Data;
+using OneTimeFileImporterSample.Data;
+
+namespace OneTimeFileImporterSample
+{
+    internal class Program
+    {
+        private static List<excel> importData2;
+
+        private static void Main(string[] args)
+        {
+
+            //Csv
+            const string filepath = @"C:\Users\user\Desktop\Excel\books.csv";
+            //excel
+            const string filepath2 = @"C:\Users\user\Desktop\Excel\books.xlsx";
+
+
+
+            Logger logger = new Logger("log.txt"); // Initializează logger-ul
+
+            if (!IsFileAvailable(filepath))
+            {
+                Console.WriteLine("File is currently in use. Please try again");
+                logger.Log("File is currently in use. Please try again");
+                return;
+            }
+
+            logger.Log("Application starting");
+
+            bool continueRunning = true;
+
+            do
+            {
+                Console.WriteLine("Select Method:\n 1 ParseCsv \n 2 Parse with CsvHelper \n 3 Parse Excel \n 4 Truncate Library \n 5 Truncate Excel \n 6 Bulk Insert Excel \n 7 Exit\n");
+                var selection = Console.ReadLine();
+
+                switch (selection)
+                {
+                    case "1":
+                        var importData = ParseCsv(filepath); // Parsare CSV utilizând funcția ParseCsv
+                        var imported = ImportFileToDb(importData, logger); // Import în baza de date utilizând funcția ImportFileToDb
+                        if (imported)
+                        {
+                            logger.Log("Import completed successfully");
+
+                        }
+                        break;
+                    case "2":
+                        importData = ParseFileUsingCsvReader(filepath); // Parsare CSV utilizând funcția ParseFileUsingCsvReader
+                        imported = ImportFileToDb(importData, logger); // Import în baza de date utilizând funcția ImportFileToDb
+                        if (imported)
+                        {
+                            logger.Log("Import completed successfully");
+
+                        }
+                        break;
+                    case "3":
+                        importData2 = ParseExcel(filepath2);
+                        var imported_ = ImportExcelToDb(importData2, logger);
+                        Console.WriteLine(imported_);
+                        if (imported_)
+                        {
+                            logger.Log("Import completed successfully");
+                            Thread.Sleep(2000);
+                        }
+                        break;
+
+                    case "4":
+                        TruncateLibraryTable();
+                        break;
+
+                    case "5":
+                        TruncateExcelTable();
+                        break;
+                    case "6":
+                        // Parse Excel data
+                        importData2 = ParseExcel(filepath2);
+                        // Perform bulk insert of Excel data using BulkInsertExcel method
+                        BulkInsertExcel(importData2, logger);
+                        Console.WriteLine("Bulk insert completed.");
+                        break;
+                    case "7":
+                        continueRunning = false;
+                        Console.WriteLine("Program Exit");
+                        logger.Log("Program Exit");
+                        break;
+                    default:
+                        Console.WriteLine("Invalid selection, Try Again");
+                        logger.Log("Invalid selection, Try Again");
+                        break;
+                }
+            } while (continueRunning);
+        }
+
+        private static List<excel> ParseExcel(string filepath2)
+        {
+            var fileData = new List<excel>();
+            try
+            {
+                using (var stream = File.Open(filepath2, FileMode.Open, FileAccess.Read))
+                using (var reader = ExcelReaderFactory.CreateReader(stream))
+                {
+                    DataSet result = reader.AsDataSet();
+                    DataTable dataTable = result.Tables[0];
+
+                    for (int i = 1; i < dataTable.Rows.Count; i++) // Starting from 1 to skip header row
+                    {
+                        DataRow row = dataTable.Rows[i];
+                        var excel_ = new excel();
+                        excel_.id = Convert.ToInt32(row[0]);
+                        excel_.BookName = Convert.ToString(row[1]);
+                        excel_.Author = Convert.ToString(row[2]);
+                        excel_.Isbn13 = Convert.ToString(row[3]);
+                        excel_.Isbn10 = Convert.ToString(row[4]);
+                        excel_.Publisher = Convert.ToString(row[5]);
+                        excel_.YearPublished = Convert.ToString(row[6]);
+                        excel_.CoverImage = Convert.ToString(row[7]);
+                        excel_.QtyAvailable = Convert.ToInt32(row[8]);
+
+                        fileData.Add(excel_);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            return fileData;
+        }
+       
+
+        private static bool ImportExcelToDb(List<excel> importData, Logger logger)
+        {
+            var success = false;
+
+            try
+            {
+                using (var db = new I_CoposEntities2()) // Corectați denumirea clasei I_CoposEntities
+                {
+                    // Pasul 1: Ștergerea intrărilor duplicate
+                    var isbn13List = importData.Select(item => item.Isbn13).ToList();
+                    var duplicateEntries = db.excels.Where(e => isbn13List.Contains(e.Isbn13)).ToList();
+
+                    foreach (var entry in duplicateEntries)
+                    {
+                        db.excels.Remove(entry);
+                    }
+
+                    db.SaveChanges();
+                    Console.WriteLine("Duplicate entries removed.");
+                    logger.Log("Duplicate entries removed.");
+
+                    // Pasul 2: Actualizarea și afișarea mesajelor corespunzătoare
+                    foreach (var item in importData)
+                    {
+                        var existingEntry = db.excels.FirstOrDefault(e => e.Isbn13 == item.Isbn13);
+
+                        if (existingEntry != null)
+                        {
+                            if (!item.Equals(existingEntry))
+                            {
+                                Console.WriteLine($"Updating entry with ISBN13: {item.Isbn13}...");
+                                logger.Log($"Updating entry with ISBN13: {item.Isbn13}...");
+                                // Update the fields of existingEntry with item's values
+                                existingEntry.BookName = item.BookName;
+                                existingEntry.Author = item.Author;
+                                existingEntry.Isbn13 = item.Isbn13;
+                                existingEntry.Isbn10 = item.Isbn10;
+                                existingEntry.Publisher = item.Publisher;
+                                existingEntry.YearPublished = item.YearPublished;
+                                existingEntry.CoverImage = item.CoverImage;
+                                existingEntry.QtyAvailable = item.QtyAvailable;
+                                db.SaveChanges();
+                                Console.WriteLine($"Update completed for ISBN13: {item.Isbn13}");
+                                logger.Log($"Update completed for ISBN13: {item.Isbn13}");
+                            }
+                        }
+                        else
+                        {
+                            db.excels.Add(item);
+                        }
+                    }
+
+                    db.SaveChanges();
+                    success = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Log($"Error importing data: {ex.Message}");
+                return false;
+            }
+
+            if (success)
+            {
+                Console.WriteLine("Import completed");
+                logger.Log("Import completed");
+            }
+
+            return success;
+        }
+
+        private static bool BulkInsertExcel(List<excel> importData, Logger logger)
+{
+    bool success = false;
+
+    try
+    {
+        using (var db = new I_CoposEntities2())
+        {
+            var isbn13List = importData.Select(item => item.Isbn13).ToList();
+            var duplicateEntries = db.excels.Where(e => isbn13List.Contains(e.Isbn13)).ToList();
+
+            foreach (var entry in duplicateEntries)
+            {
+                db.excels.Remove(entry);
+            }
+
+            db.SaveChanges();
+            Console.WriteLine("Duplicate entries removed.");
+            logger.Log("Duplicate entries removed.");
+
+            // Realizați inserarea în masă a datelor
+            try
+            {
+                db.excels.AddRange(importData);
+                db.SaveChanges();
+                success = true;
+                Console.WriteLine("Bulk insert completed successfully.");
+                logger.Log("Bulk insert completed successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error performing bulk insert: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                logger.Log($"Error performing bulk insert: {ex.Message}");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.Log($"Error importing data: {ex.Message}");
+        return false;
+    }
+
+    return success;
+}
+
+
+        private static void TruncateExcelTable()
+        {
+            try
+            {
+                using (var db = new I_CoposEntities2()) // Corectați denumirea clasei I_CoposEntities2
+                {
+                    db.Database.ExecuteSqlCommand("TRUNCATE TABLE excel");
+                    Console.WriteLine("Excel table truncated.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error truncating Excel table: {ex.Message}");
+            }
+        }
+
+        private static void TruncateLibraryTable()
+        {
+            try
+            {
+                using (var db = new I_CoposEntities())
+                {
+                    db.Database.ExecuteSqlCommand("TRUNCATE TABLE [Library]");
+                    Console.WriteLine("Library table truncated.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error truncating Library table: {ex.Message}");
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        // Metoda pentru a verifica dacă fișierul este disponibil pentru citire
+        private static bool IsFileAvailable(string filepath)
+        {
+            try
+            {
+                using (File.Open(filepath, FileMode.Open, FileAccess.Read, FileShare.None))
+                {
+                    return true;
+                }
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+        }
+
+        // Metodă pentru a parsa CSV folosind expresii regulate
+        private static List<Library> ParseCsv(string filepath)
+        {
+            var fileData = new List<Library>();
+            try
+            {
+                using (var sr = new StreamReader(filepath))
+                {
+                    var line = sr.ReadLine();
+
+                    while ((line = sr.ReadLine()) != null)
+                    {
+                        var delimited = Regex.Split(line, ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+
+                        var row = new Library
+                        {
+                            id = Convert.ToInt32(delimited[0]),
+                            BookName = delimited[1],
+                            Author = delimited[2],
+                            Isbn13 = delimited[3],
+                            Isbn10 = delimited[4],
+                            Publisher = delimited[5],
+                            YearPublished = delimited[6],
+                            CoverImage = delimited[7],
+                            QtyAvailable = Convert.ToInt32(delimited[8])
+                        };
+                        fileData.Add(row);
+                    }
+                }
+
+                // Afisare date parsate pentru fiecare carte
+                foreach (var book in fileData)
+                {
+                    Console.WriteLine($"id: {book.id}, Author: {book.Author}, ISBN13: {book.Isbn13}, ISBN10: {book.Isbn10}, Publisher: {book.Publisher}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            return fileData;
+        }
+
+        // Metodă pentru a parsa CSV folosind CsvHelper
+        private static List<Library> ParseFileUsingCsvReader(string filepath)
+        {
+            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                IgnoreBlankLines = true,
+                MissingFieldFound = null,
+            };
+            var records = new List<Library>();
+            try
+            {
+                using (var sr = new StreamReader(filepath))
+                {
+                    using (var csv = new CsvReader(sr, config))
+                    {
+                        while (csv.Read())
+                        {
+                            var row = csv.GetRecord<Library>();
+                            records.Add(row);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error while processing file: {ex.Message}");
+            }
+
+            foreach (var book in records)
+            {
+                Console.WriteLine($"id: {book.id}, Author: {book.Author}, ISBN13: {book.Isbn13}, ISBN10: {book.Isbn10}, Publisher: {book.Publisher}");
+            }
+
+            return records;
+        }
+
+
+
+        private static bool HasChanges(Library oldItem, Library newItem)
+        {
+            return oldItem.BookName != newItem.BookName ||
+                   oldItem.Author != newItem.Author ||
+                   oldItem.Isbn13 != newItem.Isbn13 ||
+                   oldItem.Isbn10 != newItem.Isbn10 ||
+                   oldItem.Publisher != newItem.Publisher ||
+                   oldItem.YearPublished != newItem.YearPublished ||
+                   oldItem.CoverImage != newItem.CoverImage ||
+                   oldItem.QtyAvailable != newItem.QtyAvailable;
+        }
+        private static bool ImportFileToDb(List<Library> fileData, Logger logger)
+        {
+            bool success = false;
+            try
+            {
+                using (var db = new I_CoposEntities())
+                {
+                    bool duplicateMessageLogged = false;
+                    int duplicateCount = 0;
+                    int updateCount = 0;
+                    int noChangeCount = 0;
+
+                    List<Library> newItems = new List<Library>();
+                    foreach (var item in fileData)
+                    {
+                        var existingBook = db.Libraries.FirstOrDefault(b => b.Isbn13 == item.Isbn13);
+                        if (existingBook != null)
+                        {
+                            if (!duplicateMessageLogged)
+                            {
+                                Console.WriteLine($"Duplicate entries found. Removing...");
+                                logger.Log($"Duplicate entries found. Removing...");
+                                duplicateMessageLogged = true;
+                            }
+                            db.Libraries.Remove(existingBook);
+                            duplicateCount++;
+                        }
+                        else
+                        {
+                            existingBook = db.Libraries.FirstOrDefault(b => b.Isbn10 == item.Isbn10);
+                            if (existingBook != null)
+                            {
+                                bool hasChanges = HasChanges(existingBook, item);
+                                if (hasChanges)
+                                {
+                                    Console.WriteLine($"Updating entry for ISBN13: {item.Isbn13}...");
+                                    logger.Log($"Updating entry for ISBN13: {item.Isbn13}...");
+                                    db.Entry(existingBook).CurrentValues.SetValues(item);
+                                    db.SaveChanges();
+                                    updateCount++;
+                                }
+                                else
+                                {
+                                    noChangeCount++;
+                                }
+                            }
+                            else
+                            {
+                                newItems.Add(item);
+                            }
+                        }
+                    }
+
+                    foreach (var newItem in newItems)
+                    {
+                        db.Libraries.Add(newItem);
+                    }
+
+                    db.SaveChanges();
+                    success = true;
+
+                    if (duplicateCount > 0)
+                    {
+                        Console.WriteLine($"Deleted {duplicateCount} duplicate entries");
+                        logger.Log($"Deleted {duplicateCount} duplicate entries");
+                    }
+
+                    if (updateCount > 0)
+                    {
+                        Console.WriteLine($"Updated {updateCount} entries");
+                        logger.Log($"Updated {updateCount} entries");
+                    }
+                    else if (noChangeCount > 0)
+                    {
+                        Console.WriteLine($"No changes in {noChangeCount} entries");
+                        logger.Log($"No changes in {noChangeCount} entries");
+                    }
+                    else
+                    {
+                        Console.WriteLine("No updates or changes detected.");
+                        logger.Log("No updates or changes detected.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Log($"Error importing data: {ex.Message}");
+                return false;
+            }
+            return success;
+        }
+    }
+}
+
