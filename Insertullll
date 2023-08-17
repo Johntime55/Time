@@ -1,0 +1,89 @@
+private static void Main(string[] args)
+{
+    Console.WriteLine("Application starting");
+
+    const string filepath2 = @""; // Setati calea catre fisierul Excel
+    var logger = new Logger("log.txt");
+    logger.Log("Application starting");
+
+    bool continueRunning = true;
+
+    do
+    {
+        Console.WriteLine("Select Method:\n 1 ParseCsv \n 2 Parse with CsvHelper \n 3 Parse Excel \n 4 Bulk Insert Excel \n 5 Exit\n");
+        var selection = Console.ReadLine();
+
+        switch (selection)
+        {
+            case "1":
+                // ...
+                break;
+            case "2":
+                // ...
+                break;
+            case "3":
+                // ...
+                break;
+            case "4":
+                var importData = ParseExcel(filepath2);
+                var bulkInserted = BulkInsertExcelToDb(importData, logger);
+                if (bulkInserted)
+                {
+                    logger.Log("Bulk insert completed");
+                }
+                break;
+            case "5":
+                continueRunning = false;
+                break;
+            default:
+                Console.WriteLine("Invalid selection");
+                break;
+        }
+
+    } while (continueRunning);
+
+    Console.WriteLine("Exiting...");
+}
+
+private static bool BulkInsertExcelToDb(List<excel> importData, Logger logger)
+{
+    var success = false;
+
+    try
+    {
+        using (var db = new I_CoposEntities2()) // Corectați denumirea clasei I_CoposEntities2
+        {
+            var existingIsbn13List = db.excel.Select(e => e.Isbn13).ToList();
+            var newItems = importData.Where(item => !existingIsbn13List.Contains(item.Isbn13)).ToList();
+
+            if (newItems.Any())
+            {
+                db.excel.AddRange(newItems);
+                db.SaveChanges();
+                Console.WriteLine($"{newItems.Count} new entries inserted.");
+                logger.Log($"{newItems.Count} new entries inserted.");
+            }
+            else
+            {
+                Console.WriteLine("No new entries to insert.");
+                logger.Log("No new entries to insert.");
+            }
+
+            success = true;
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.Log($"Error importing data: {ex.Message}");
+        return false;
+    }
+
+    if (success)
+    {
+        Console.WriteLine("Bulk insert completed");
+        logger.Log("Bulk insert completed");
+    }
+
+    return success;
+}
+￼Enter
