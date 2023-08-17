@@ -1,0 +1,61 @@
+private static bool ImportExcelToDb(List<excel> importData, Logger logger)
+{
+    var success = false;
+
+    try
+    {
+        using (var db = new I_CoposEntities()) // Corectați denumirea clasei I_CoposEntities
+        {
+            foreach (var item in importData)
+            {
+                var existingEntry = db.excels.FirstOrDefault(e => e.Isbn13 == item.Isbn13);
+                if (existingEntry != null)
+                {
+                    if (!item.Equals(existingEntry))
+                    {
+                        Console.WriteLine($"Updating entry with ISBN13: {item.Isbn13}...");
+                        logger.Log($"Updating entry with ISBN13: {item.Isbn13}...");
+                        // Update the fields of existingEntry with item's values
+                        existingEntry.BookName = item.BookName;
+                        existingEntry.Author = item.Author;
+                        existingEntry.Isbn13 = item.Isbn13;
+                        existingEntry.Isbn10 = item.Isbn10;
+                        existingEntry.Publisher = item.Publisher;
+                        existingEntry.YearPublished = item.YearPublished;
+                        existingEntry.CoverImage = item.CoverImage;
+                        existingEntry.QtyAvailable = item.QtyAvailable;
+                        db.SaveChanges();
+                        Console.WriteLine($"Update completed for ISBN13: {item.Isbn13}");
+                        logger.Log($"Update completed for ISBN13: {item.Isbn13}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Duplicate entry found for ISBN13: {item.Isbn13}. Removing..");
+                        logger.Log($"Duplicate entry found for ISBN13: {item.Isbn13}. Removing...");
+                        db.excels.Remove(existingEntry);
+                    }
+                }
+                else
+                {
+                    db.excels.Add(item);
+                }
+            }
+            db.SaveChanges();
+            success = true;
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.Log($"Error importing data: {ex.Message}");
+        return false;
+    }
+
+    if (success)
+    {
+        Console.WriteLine("Import completed");
+        logger.Log("Import completed");
+    }
+
+    return success;
+}
+￼Enter
