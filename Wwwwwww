@@ -1,0 +1,36 @@
+private static List<excel> ParseExcel(string filepath2)
+{
+    var fileData = new List<excel>();
+    try
+    {
+        using (var stream = File.Open(filepath2, FileMode.Open, FileAccess.Read))
+        using (var reader = ExcelReaderFactory.CreateReader(stream))
+        {
+            DataSet result = reader.AsDataSet();
+            DataTable dataTable = result.Tables[0];
+
+            for (int i = 1; i < dataTable.Rows.Count; i++) // Starting from 1 to skip header row
+            {
+                DataRow row = dataTable.Rows[i];
+                var excel_ = new excel();
+                excel_.id = Convert.ToInt32(row[0]);
+                excel_.BookName = Convert.ToString(row[1]);
+                excel_.Author = Convert.ToString(row[2]);
+                excel_.Isbn13 = Convert.ToString(row[3]);
+                excel_.Isbn10 = Convert.ToString(row[4]);
+                excel_.Publisher = Convert.ToString(row[5]);
+                excel_.YearPublished = Convert.ToString(row[6]);
+                excel_.CoverImage = Convert.ToString(row[7]);
+                excel_.QtyAvailable = Convert.ToInt32(row[8]);
+
+                fileData.Add(excel_);
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine(ex.Message);
+    }
+    return fileData;
+}
+￼Enter
