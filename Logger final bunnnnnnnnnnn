@@ -1,0 +1,32 @@
+using System;
+using System.IO;
+
+namespace OneTimeFileImporterSample.Data
+{
+    internal class Logger
+    {
+        private readonly string logFilePath; // Path to the log file
+
+        public Logger(string logFilePath)
+        {
+            this.logFilePath = logFilePath; // Initialize the path to the log file
+        }
+
+        public void Log(string message)
+        {
+            try
+            {
+                using (var writer = new StreamWriter(logFilePath, true)) // Use a "using" block to ensure resources are released properly
+                {
+                    // Write the date and message to the log file using the formatting string
+                    writer.WriteLine($"{DateTime.Now} - {message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                // In case of an error, display an error message on the console
+                Console.WriteLine($"Error while logging: {ex.Message}");
+            }
+        }
+    }
+}
