@@ -1,0 +1,37 @@
+private static bool BulkInsertCsv(List<Library> importData, Logger logger)
+{
+    bool success = false;
+
+    try
+    {
+        using (var db = new I_CoposEntities())
+        {
+            // Realizează inserarea în masă a datelor CSV
+            try
+            {
+                db.Libraries.AddRange(importData);
+                db.SaveChanges();
+                success = true;
+                Console.WriteLine("Bulk insert completed successfully.");
+                logger.Log("Bulk insert completed successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error performing bulk insert: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                logger.Log($"Error performing bulk insert: {ex.Message}");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.Log($"Error importing data: {ex.Message}");
+        return false;
+    }
+
+    return success;
+}
+￼Enter
