@@ -1,0 +1,57 @@
+case "6":
+    var importDataCsv = ParseCsv(filepath);
+    BulkInsertCsv(importDataCsv, logger);
+    Console.WriteLine("Bulk insert for CSV completed.");
+    logger.Log("Bulk insert for CSV completed.");
+    break;
+
+
+private static bool BulkInsertCsv(List<Library> importData, Logger logger)
+{
+    bool success = false;
+
+    try
+    {
+        using (var db = new I_CoposEntities())
+        {
+            var isbn13List = importData.Select(item => item.Isbn13).ToList();
+            var duplicateEntries = db.Libraries.Where(e => isbn13List.Contains(e.Isbn13)).ToList();
+
+            foreach (var entry in duplicateEntries)
+            {
+                db.Libraries.Remove(entry);
+            }
+
+            db.SaveChanges();
+            Console.WriteLine("Duplicate entries removed.");
+            logger.Log("Duplicate entries removed.");
+
+            // Realizează inserarea în masă a datelor CSV
+            try
+            {
+                db.Libraries.AddRange(importData);
+                db.SaveChanges();
+                success = true;
+                Console.WriteLine("Bulk insert completed successfully.");
+                logger.Log("Bulk insert completed successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error performing bulk insert: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                logger.Log($"Error performing bulk insert: {ex.Message}");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.Log($"Error importing data: {ex.Message}");
+        return false;
+    }
+
+    return success;
+}
+￼Enter
