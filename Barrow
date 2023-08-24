@@ -1,0 +1,95 @@
+using System;
+using System.Linq;
+using System.Web.Mvc;
+using MyLibrary.Models; // Asigurați-vă că aceasta este calea corectă către modelele dvs.
+
+namespace MyLibrary.Controllers
+{
+    public class BarrowBooksController : Controller
+    {
+        private MyLibraryDbContext db = new MyLibraryDbContext(); // Asigurați-vă că utilizați contextul bazei de date corect
+
+        // GET: BarrowBooks/Create
+        public ActionResult Create()
+        {
+            ViewBag.LibraryBooks = new SelectList(db.LibraryBooks.Where(b => b.QuantityAvailable > 0), "Id", "BookName");
+            return View();
+        }
+
+        // POST: BarrowBooks/Create
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Create(int libraryBookId)
+        {
+            var libraryBook = db.LibraryBooks.Find(libraryBookId);
+
+            if (libraryBook != null && libraryBook.QuantityAvailable > 0)
+            {
+                BarrowBook barrowBook = new BarrowBook
+                {
+                    LibraryBookId = libraryBookId,
+                    UserId = "YourUserIdHere", // Aici trebuie să utilizați metoda potrivită pentru a obține ID-ul utilizatorului curent
+                    BookName = libraryBook.BookName,
+                    BookIsbn = libraryBook.BookIsbn,
+                    BarrowDate = DateTime.Now,
+                    ReturnDate = DateTime.Now.AddDays(14) // Împrumut pe o perioadă de 2 săptămâni (14 zile)
+                };
+
+                db.BarrowBooks.Add(barrowBook);
+                libraryBook.QuantityAvailable--;
+
+                db.SaveChanges();
+                return RedirectToAction("Index", "LibraryBooks"); // Redirecționați către o pagină relevantă
+            }
+
+            ViewBag.LibraryBooks = new SelectList(db.LibraryBooks.Where(b => b.QuantityAvailable > 0), "Id", "BookName");
+            ModelState.AddModelError("", "Book is not available for borrowing.");
+            return View();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                db.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+    }
+}
+
+@model MyLibrary.Models.BarrowBook
+
+@{
+    ViewBag.Title = "Borrow a Book";
+}
+
+<h2>@ViewBag.Title</h2>
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+
+    <div class="form-horizontal">
+        <h4>Select a book to borrow:</h4>
+        <div class="form-group">
+            @Html.Label("Library Book:", htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.DropDownListFor(model => model.LibraryBookId, (SelectList)ViewBag.LibraryBooks, "-- Select a book --", new { @class = "form-control" })
+                @Html.ValidationMessageFor(model => model.LibraryBookId, "", new { @class = "text-danger" })
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Borrow" class="btn btn-default" />
+            </div>
+        </div>
+    </div>
+}
+
+<div>
+    @Html.ActionLink("Back to List", "Index", "LibraryBooks")
+</div>
+
+
+￼Enter
