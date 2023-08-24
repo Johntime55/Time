@@ -1,0 +1,234 @@
+using System;
+using System.Linq;
+using System.Web.Mvc;
+using MyLibrary.Models; // Asigurați-vă că utilizați namespace-ul corect pentru modelele dvs.
+using System.Data.Entity;
+
+namespace MyLibrary.Controllers
+{
+    public class BarrowBookController : Controller
+    {
+        private I_CoposEntities db = new I_CoposEntities(); // Asigurați-vă că utilizați conexiunea corectă cu baza de date
+
+        // GET: BarrowBook
+        public ActionResult Index()
+        {
+            var barrowBooks = db.Barrow.ToList();
+            return View(barrowBooks);
+        }
+
+        // GET: BarrowBook/Create
+        public ActionResult Create(int? id)
+        {
+            if (id == null)
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            }
+
+            var bookToBorrow = db.Library.Find(id);
+
+            if (bookToBorrow == null)
+            {
+                return HttpNotFound();
+            }
+
+            ViewBag.BookToBorrow = bookToBorrow;
+            return View();
+        }
+
+        // POST: BarrowBook/Create
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Create(int bookId)
+        {
+            var bookToBorrow = db.Library.Find(bookId);
+
+            if (bookToBorrow == null)
+            {
+                return HttpNotFound();
+            }
+
+            // Împrumutul cărții
+            Barrow barrowBook = new Barrow
+using System;
+using System.Linq;
+using System.Web.Mvc;
+using MyLibrary.Models; // Asigurați-vă că utilizați namespace-ul corect pentru modelele dvs.
+using System.Data.Entity;
+
+namespace MyLibrary.Controllers
+{
+    public class BarrowBookController : Controller
+    {
+        private I_CoposEntities db = new I_CoposEntities(); // Asigurați-vă că utilizați conexiunea corectă cu baza de date
+
+        // GET: BarrowBook
+        public ActionResult Index()
+        {
+            var barrowBooks = db.Barrow.ToList();
+            return View(barrowBooks);
+        }
+
+        // GET: BarrowBook/Create
+        public ActionResult Create(int? id)
+        {
+            if (id == null)
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            }
+
+            var bookToBorrow = db.Library.Find(id);
+
+            if (bookToBorrow == null)
+            {
+                return HttpNotFound();
+            }
+
+            ViewBag.BookToBorrow = bookToBorrow;
+            return View();
+        }
+
+        // POST: BarrowBook/Create
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Create(int bookId)
+        {
+            var bookToBorrow = db.Library.Find(bookId);
+
+            if (bookToBorrow == null)
+            {
+                return HttpNotFound();
+            }
+
+            // Împrumutul cărții
+            Barrow barrowBook = new Barrow
+            {
+                UserId = 1, // Id-ul utilizatorului curent (trebuie actualizat conform logicii dvs.)
+                BookName = bookToBorrow.BookName,
+                BookIsbn = bookToBorrow.Isbn13,
+                BorrowDate = DateTime.Now,
+                ReturnDate = DateTime.Now.AddDays(14) // Exemplu: împrumut pentru 2 săptămâni
+            };
+
+            db.Barrow.Add(barrowBook);
+            db.SaveChanges();
+
+            // Actualizați cantitatea disponibilă a cărții în Library
+            bookToBorrow.QtyAvailable--;
+
+            db.Entry(bookToBorrow).State = EntityState.Modified;
+            db.SaveChanges();
+
+            return RedirectToAction("Index");
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                db.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+    }
+}
+
+@model MyLibrary.Models.Barrow
+
+@{
+    ViewBag.Title = "Borrow Book";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Borrow Book</h2>
+
+<h4>Book Details</h4>
+<div>
+    <dl class="dl-horizontal">
+        <dt>
+            @Html.DisplayNameFor(model => model.BookName)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.BookName)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.BookIsbn)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.BookIsbn)
+        </dd>
+    </dl>
+</div>
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+
+    <div class="form-horizontal">
+        <h4>Confirm Borrow</h4>
+        <hr />
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="hidden" name="bookId" value="@Model.BookId" />
+                <input type="submit" value="Borrow" class="btn btn-default" />
+            </div>
+        </div>
+    </div>
+}
+
+<div>
+    @Html.ActionLink("Back to List", "Index")
+</div>
+
+￼Enter            {
+                UserId = 1, // Id-ul utilizatorului curent (trebuie actualizat conform logicii dvs.)
+                BookName = bookToBorrow.BookName,
+                BookIsbn = bookToBorrow.Isbn13,
+                BorrowDate = DateTime.Now,
+                ReturnDate = DateTime.Now.AddDays(14) // Exemplu: împrumut pentru 2 săptămâni
+            };
+
+            db.Barrow.Add(barrowBook);
+            db.SaveChanges();
+
+            // Actualizați cantitatea disponibilă a cărții în Library
+            bookToBorrow.QtyAvailable--;
+
+            db.Entry(bookToBorrow).State = EntityState.Modified;
+            db.SaveChanges();
+
+            return RedirectToAction("Index");
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                db.Dispose();
+            }
+      base.Dispose(disposing);
+        }
+    }
+}
+
+@model MyLibrary.Models.Barrow
+
+@{
+    ViewBag.Title = "Borrow Book";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Borrow Book</h2>
+
+<h4>Book Details</h4>
+<div>
+    <dl class="dl-horizontal">
+        <dt>
+            @Html.DisplayNameFor(model => model.BookName)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.BookName)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.BookIsbn)
+        </dt>
