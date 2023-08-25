@@ -1,0 +1,300 @@
+using System;
+using System.Linq;
+using System.Web.Mvc;
+using MyLibrary.Models; 
+using System.Data.Entity;
+using System.Net;
+using MyLibrary.ADClasses;
+
+namespace MyLibrary.Controllers
+{
+    public class BorrowBookController : Controller
+    {
+        private I_CoposEntities db = new I_CoposEntities();
+        UserInfo user = new UserInfo();
+
+        // GET: BorrowBook/Borrow
+        public ActionResult Borrow()
+        {
+            ViewBag.ErrorMessage = TempData["ErrorMessage"];
+            ViewBag.SuccessMessage = TempData["SuccessMessage"];
+            return View();
+        }
+
+        // POST: BorrowBook/Borrow
+        [HttpPost]
+        public ActionResult Borrow(string isbn13)
+        {
+            if (string.IsNullOrEmpty(isbn13) || isbn13.Length != 13)
+            {
+                TempData["ErrorMessage"] = "ISBN-13 trebuie să aibă 13 cifre.";
+                return RedirectToAction("Borrow");
+            }
+
+            var book = db.Libraries.FirstOrDefault(b => b.Isbn13 == isbn13);
+            if (book == null)
+            {
+                TempData["ErrorMessage"] = "Cartea cu acest ISBN-13 nu există în bibliotecă.";
+                return RedirectToAction("Borrow");
+            }
+
+            if (user.isLoggedIn())
+            {
+                string currentUserId = getUserName();
+
+                if (book.QtyAvailable > 0)
+                {
+                    book.QtyAvailable--;
+
+                    Barrow borrowedBook = new Barrow
+                    {
+                        UserId = currentUserId,
+                        BookName = book.BookName,
+                        BookISBN = book.Isbn13,
+                        BorrowDate = DateTime.Now,
+                        ReturnDate = DateTime.Now.AddDays(14)
+                    };
+                    db.Barrows.Add(borrowedBook);
+                    db.SaveChanges();
+
+                    TempData["SuccessMessage"] = "Cartea a fost împrumutată cu succes!";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Cartea nu este disponibilă pentru împrumut.";
+                }
+
+                return RedirectToAction("Borrow", "BorrowBook");
+            }
+            else
+            {
+                return RedirectToAction("LoginPage", "Account");
+            }
+        }
+
+        // GET: BorrowBook/BorrowedBooks
+        public ActionResult BorrowedBooks()
+        {
+            if (user.isLoggedIn())
+            {
+                string currentUserId = getUserName();
+                var borrowedBooks = db.Barrows.Where(b => b.UserId == currentUserId).ToList();
+                return View(borrowedBooks);
+            }
+            else
+            {
+using System;
+using System.Linq;
+using System.Web.Mvc;
+using MyLibrary.Models; 
+using System.Data.Entity;
+using System.Net;
+using MyLibrary.ADClasses;
+
+namespace MyLibrary.Controllers
+{
+    public class BorrowBookController : Controller
+    {
+        private I_CoposEntities db = new I_CoposEntities();
+        UserInfo user = new UserInfo();
+
+        // GET: BorrowBook/Borrow
+        public ActionResult Borrow()
+        {
+            ViewBag.ErrorMessage = TempData["ErrorMessage"];
+            ViewBag.SuccessMessage = TempData["SuccessMessage"];
+            return View();
+        }
+
+        // POST: BorrowBook/Borrow
+        [HttpPost]
+        public ActionResult Borrow(string isbn13)
+        {
+            if (string.IsNullOrEmpty(isbn13) || isbn13.Length != 13)
+            {
+                TempData["ErrorMessage"] = "ISBN-13 trebuie să aibă 13 cifre.";
+                return RedirectToAction("Borrow");
+            }
+
+            var book = db.Libraries.FirstOrDefault(b => b.Isbn13 == isbn13);
+            if (book == null)
+            {
+                TempData["ErrorMessage"] = "Cartea cu acest ISBN-13 nu există în bibliotecă.";
+                return RedirectToAction("Borrow");
+            }
+
+            if (user.isLoggedIn())
+            {
+                string currentUserId = getUserName();
+
+                if (book.QtyAvailable > 0)
+                {
+                    book.QtyAvailable--;
+
+                    Barrow borrowedBook = new Barrow
+                    {
+                        UserId = currentUserId,
+                        BookName = book.BookName,
+                        BookISBN = book.Isbn13,
+                        BorrowDate = DateTime.Now,
+                        ReturnDate = DateTime.Now.AddDays(14)
+                    };
+                    db.Barrows.Add(borrowedBook);
+                    db.SaveChanges();
+
+                    TempData["SuccessMessage"] = "Cartea a fost împrumutată cu succes!";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Cartea nu este disponibilă pentru împrumut.";
+                }
+
+                return RedirectToAction("Borrow", "BorrowBook");
+            }
+            else
+            {
+                return RedirectToAction("LoginPage", "Account");
+            }
+        }
+
+        // GET: BorrowBook/BorrowedBooks
+        public ActionResult BorrowedBooks()
+        {
+            if (user.isLoggedIn())
+            {
+                string currentUserId = getUserName();
+                var borrowedBooks = db.Barrows.Where(b => b.UserId == currentUserId).ToList();
+                return View(borrowedBooks);
+            }
+            else
+            {
+                return RedirectToAction("LoginPage", "Account");
+            }
+        }
+
+        public string getUserName()
+        {
+            return user.getUsername();
+        }
+    }
+}
+
+@model List<MyLibrary.Models.Barrow>
+
+@{
+    ViewBag.Title = "Cărți Împrumutate";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Cărți Împrumutate</h2>
+
+@if (Model.Count == 0)
+{
+    <p>Nu aveți cărți împrumutate momentan.</p>
+}
+else
+{
+    <table class="table">
+        <tr>
+            <th>Titlu Carte</th>
+            <th>ISBN</th>
+            <th>Data Împrumut</th>
+            <th>Data Returnare</th>
+        </tr>
+        @foreach (var book in Model)
+        {
+            <tr>
+                <td>@book.BookName</td>
+                <td>@book.BookISBN</td>
+                <td>@book.BorrowDate.ToString("yyyy-MM-dd")</td>
+                <td>@book.ReturnDate.ToString("yyyy-MM-dd")</td>
+            </tr>
+        }
+    </table>
+}
+
+@{
+    ViewBag.Title = "Împrumut Cărți";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Împrumut Cărți</h2>
+
+@if (!string.IsNullOrEmpty(ViewBag.ErrorMessage))
+{
+    <div class="alert alert-danger">
+        @ViewBag.ErrorMessage
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(ViewBag.SuccessMessage))
+{
+    <div class="alert alert-success">
+        @ViewBag.SuccessMessage
+    </div>
+}
+
+@using (Html.BeginForm())
+{
+    <div class="form-group">
+        @Html.Label("ISBN-13:")
+        @Html.TextBox("isbn13", null, new { @class = "form-control" })
+        @Html.ValidationMessage("isbn13", "", new { @class = "text-danger" })
+    </div>
+
+    <button type="submit" class="btn btn-primary">Împrumută</button>
+}
+
+
+￼Enter                return RedirectToAction("LoginPage", "Account");
+            }
+        }
+
+        public string getUserName()
+        {
+            return user.getUsername();
+        }
+    }
+}
+
+@model List<MyLibrary.Models.Barrow>
+
+@{
+    ViewBag.Title = "Cărți Împrumutate";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Cărți Împrumutate</h2>
+
+@if (Model.Count == 0)
+{
+    <p>Nu aveți cărți împrumutate momentan.</p>
+}
+else
+{
+able class="table">
+        <tr>
+            <th>Titlu Carte</th>
+            <th>ISBN</th>
+            <th>Data Împrumut</th>
+            <th>Data Returnare</th>
+        </tr>
+        @foreach (var book in Model)
+        {
+            <tr>
+                <td>@book.BookName</td>
+                <td>@book.BookISBN</td>
+                <td>@book.BorrowDate.ToString("yyyy-MM-dd")</td>
+                <td>@book.ReturnDate.ToString("yyyy-MM-dd")</td>
+            </tr>
+        }
+    </table>
+}
+
+@{
+    ViewBag.Title = "Împrumut Cărți";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Împrumut Cărți</h2>
+
