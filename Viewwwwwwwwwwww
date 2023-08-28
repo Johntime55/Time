@@ -1,0 +1,22 @@
+@model List<Barrow>
+
+<h2>My Borrowed Books</h2>
+
+<table class="table">
+    <tr>
+        <th>Book Name</th>
+        <th>ISBN</th>
+        <th>Borrow Date</th>
+        <th>Return Date</th>
+    </tr>
+    @foreach (var book in Model)
+    {
+        <tr>
+            <td>@book.BookName</td>
+            <td>@book.BookISBN</td>
+            <td>@book.BorrowDate.ToString("yyyy-MM-dd")</td>
+            <td>@(book.ReturnDate != null ? book.ReturnDate.Value.ToString("yyyy-MM-dd") : "Not returned yet")</td>
+        </tr>
+    }
+</table>
+￼Enter
