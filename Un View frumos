@@ -1,0 +1,42 @@
+@model List<yLibrary.Models.Barrow>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Borrowed Books</title>
+</head>
+<body>
+    <h2>My Borrowed Books</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Book Name</th>
+                <th>ISBN</th>
+                <th>Borrow Date</th>
+                <th>Return Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var book in Model)
+            {
+                <tr>
+                    <td>@book.BookName</td>
+                    <td>@book.BookISBN</td>
+                    <td>@book.BorrowDate.ToString("yyyy-MM-dd")</td>
+                    <td>
+                        @if (book.ReturnDate.HasValue)
+                        {
+                            @book.ReturnDate.Value.ToString("yyyy-MM-dd")
+                        }
+                        else
+                        {
+                            Not returned yet
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</body>
+</html>
+￼Enter
