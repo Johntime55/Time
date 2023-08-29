@@ -1,0 +1,39 @@
+public ActionResult ReturnBook(int borrowedBookId)
+{
+    var borrowedBook = db.BorrowedBooks.FirstOrDefault(b => b.BorrowedBookId == borrowedBookId);
+
+    if (borrowedBook == null)
+    {
+        TempData["ErrorMessage"] = "Cartea împrumutată nu a fost găsită.";
+        return RedirectToAction("MyBorrowedBooks");
+    }
+
+    if (borrowedBook.ReturnDate != null)
+    {
+        TempData["ErrorMessage"] = "Această carte a fost deja returnată.";
+        return RedirectToAction("MyBorrowedBooks");
+    }
+
+    if (Utilizatorul are dreptul de a returna cartea)
+    {
+        // Actualizați data de returnare
+        borrowedBook.ReturnDate = DateTime.Now; // Sau setați data și ora corectă
+
+        // Actualizați cantitatea cărții disponibile în tabelul Library
+        var libraryBook = db.Libraries.FirstOrDefault(l => l.Isbn13 == borrowedBook.BookISBN);
+        if (libraryBook != null)
+        {
+            libraryBook.QtyAvailable++;
+        }
+
+        db.SaveChanges();
+        TempData["SuccessMessage"] = "Cartea a fost returnată cu succes.";
+    }
+    else
+    {
+        TempData["ErrorMessage"] = "Nu aveți permisiunea să returnați această carte.";
+    }
+
+    return RedirectToAction("MyBorrowedBooks");
+}
+￼Enter
