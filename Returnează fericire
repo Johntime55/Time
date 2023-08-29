@@ -1,0 +1,60 @@
+public ActionResult ReturnBook(int borrowedBookId)
+{
+    var borrowedBook = db.Barrow.Find(borrowedBookId);
+    if (borrowedBook != null)
+    {
+        borrowedBook.ReturnDate = DateTime.Now;
+        db.SaveChanges();
+    }
+    return RedirectToAction("MyBorrowedBooks");
+}
+
+public ActionResult ValidateReturn(int borrowedBookId)
+{
+    var borrowedBook = db.Barrow.Find(borrowedBookId);
+    if (borrowedBook != null)
+    {
+        borrowedBook.IsValidated = true;
+        db.SaveChanges();
+    }
+    return RedirectToAction("MyBorrowedBooks");
+}
+
+<tbody>
+    @foreach (var book in Model)
+    {
+        <tr>
+            <td>@book.BorrowedBookId</td>
+            <td>@book.UserId</td>
+            <td>@book.BookName</td>
+            <td>@book.BookISBN</td>
+            <td>@book.BorrowDateFormatted</td>
+            <td>
+                @if (book.ReturnDate.HasValue)
+                {
+                    @book.ReturnDateFormatted
+                }
+                else
+                {
+                    <text>Not returned yet</text>
+                }
+            </td>
+            <td>
+                @if (!book.ReturnDate.HasValue && !book.IsValidated)
+                {
+                    <a href="@Url.Action("ReturnBook", "BorrowBook", new { borrowedBookId = book.BorrowedBookId })" class="btn btn-primary">Return</a>
+                }
+            </td>
+            <td>
+                @if (book.ReturnDate.HasValue && !book.IsValidated)
+                {
+                    <a href="@Url.Action("ValidateReturn", "BorrowBook", new { borrowedBookId = book.BorrowedBookId })" class="btn btn-success">Validate</a>
+                }
+            </td>
+        </tr>
+    }
+</tbody>
+
+
+
+￼Enter
