@@ -1,0 +1,326 @@
+tabelul waitlist
+
+CREATE TABLE Waitlist (
+    WaitlistId INT PRIMARY KEY IDENTITY,
+    UserId INT,
+    BookId INT,
+    RegistrationDate DATETIME,
+    CONSTRAINT FK_Waitlist_User FOREIGN KEY (UserId) REFERENCES Users(UserId),
+    CONSTRAINT FK_Waitlist_Book FOREIGN KEY (BookId) REFERENCES Books(BookId)
+);
+
+WaitListControler
+
+using System;
+using System.Linq;
+using System.Web.Mvc;
+using MyLibrary.Models; // Asigurați-vă că acest namespace este corect pentru modelele dvs.
+
+namespace MyLibrary.Controllers
+{
+    public class WaitlistController : Controller
+    {
+        private I_CoposEntities db = new I_CoposEntities();
+
+        // Adaugă un utilizator la lista de așteptare pentru o anumită carte
+        public ActionResult JoinWaitlist(int bookId)
+        {
+            // Verificați dacă cartea există
+            var book = db.Books.FirstOrDefault(b => b.BookId == bookId);
+            if (book == null)
+            {
+                TempData["ErrorMessage"] = "Cartea nu există.";
+                return RedirectToAction("Index", "Books");
+            }
+
+            // Verificați dacă utilizatorul este autentificat
+            if (!User.Identity.IsAuthenticated)
+            {
+                TempData["ErrorMessage"] = "Trebuie să fiți autentificat pentru a vă alătura listei de așteptare.";
+                return RedirectToAction("Login", "Account"); // Asigurați-vă că ruta de autentificare este corectă
+            }
+
+            // Verificați dacă utilizatorul este deja în lista de așteptare pentru această carte
+            var userId = GetCurrentUserId();
+            var existingWaitlist = db.Waitlist.FirstOrDefault(w => w.UserId == userId && w.BookId == bookId);
+            if (existingWaitlist != null)
+            {
+                TempData["ErrorMessage"] = "Sunteți deja în lista de așteptare pentru această carte.";
+                return RedirectToAction("BookDetails", "Books", new { id = bookId });
+            }
+
+            // Adăugați utilizatorul la lista de așteptare
+            var waitlistEntry = new Waitlist
+            {
+                UserId = userId,
+                BookId = bookId,
+                RegistrationDate = DateTime.Now
+            };
+            db.Waitlist.Add(waitlistEntry);
+            db.SaveChanges();
+
+            TempData["SuccessMessage"] = "Ați fost adăugat în lista de așteptare pentru această carte.";
+            return RedirectToAction("BookDetails", "Books", new { id = bookId });
+        }
+
+        // Obține ID-ul utilizatorului curent
+        private int GetCurrentUserId()
+        {
+            // Implementați această metodă în funcție de cum obțineți ID-ul utilizatorului curent
+            // de obicei, este legat de sistemul de autentificare pe care îl utilizați
+            // În acest exemplu, presupunem că metoda returnează ID-ul utilizatorului curent.
+            return 1; // Modificați această valoare în funcție de implementarea dvs.
+        }
+
+        // Alte metode pentru a recupera și actualiza informațiile din lista de așteptare pot fi adăugate aici.
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                db.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+    }
+}
+
+
+Viewul
+
+@model List<MyLibrary.Models.Waitlist>
+
+<h2>Waitlist</h2>
+
+@if (Model.Count > 0)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>User ID</th>
+                <th>Book ID</th>
+                <th>Registration Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entry in Model)
+            {
+                <tr>
+                    <td>@entry.UserId</td>
+                    <td>@entry.BookId</td>
+                    <td>@entry.RegistrationDate.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td>@(entry.IsActive ? "Active" : "Inactive")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No entries in the waitlist.</p>
+}
+
+
+
+
+
+
+
+
+
+
+
+using System;
+using System.Linq;
+using System.Web.Mvc;
+using MyLibrary.Models; // Asigurați-vă că importați modelul corect pentru Waitlist
+
+namespace MyLibrary.Controllers
+{
+    public class WaitlistController : Controller
+    {
+        private I_CoposEntities db = new I_CoposEntities();
+
+        public ActionResult JoinWaitlist()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult JoinWaitlist(string employeeId, string isbn13)
+        {
+            // Verificați dacă există deja o înregistrare în listă pentru acest angajat și ISBN-13
+            if (!WaitlistEntryExists(employeeId, isbn13))
+            {
+                // Adăugați o nouă înregistrare în tabelul 'waitlist'
+                Waitlist newWaitlistEntry = new Waitlist
+                {
+                    EmployeeId = employeeId,
+                    BookISBN = isbn13,
+                    RegistrationDate = DateTime.Now
+                };
+                db.Waitlists.Add(newWaitlistEntry);
+                db.SaveChanges();
+
+                TempData["WaitlistSuccess"] = "You have successfully joined the waitlist!";
+            }
+            else
+            {
+                TempData["WaitlistError"] = "You are already on the waitlist for this book.";
+            }
+
+            return RedirectToAction("JoinWaitlist");
+        }
+
+        private bool WaitlistEntryExists(string employeeId, string isbn13)
+        {
+            return db.Waitlists.Any(w => w.EmployeeId == employeeId && w.BookISBN == isbn13);
+        }
+    }
+}
+
+
+
+@model MyLibrary.Models.Waitlist
+
+@{
+    ViewBag.Title = "Join Waitlist";
+}
+
+<h2>Join Waitlist</h2>
+
+@if (TempData["WaitlistSuccess"] != null)
+{
+    <div class="alert alert-success">@TempData["WaitlistSuccess"]</div>
+}
+@if (TempData["WaitlistError"] != null)
+{
+    <div class="alert alert-danger">@TempData["WaitlistError"]</div>
+}
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+
+    <div class="form-group">
+        @Html.Label("Employee ID:")
+        @Html.TextBox("employeeId", null, new { @class = "form-control" })
+        @Html.ValidationMessage("employeeId", "", new { @class = "text-danger" })
+    </div>
+
+    <div class="form-group">
+        @Html.Label("Book ISBN-13:")
+        @Html.TextBox("isbn13", null, new { @class = "form-control" })
+        @Html.ValidationMessage("isbn13", "", new { @class = "text-danger" })
+    </div>
+
+    <button type="submit" class="btn btn-primary">Join Waitlist</button>
+}
+
+
+CREATE TABLE Waitlist (
+    WaitlistId INT PRIMARY KEY IDENTITY(1,1),
+    EmployeeId NVARCHAR(50) NOT NULL,
+    BookISBN NVARCHAR(13) NOT NULL,
+    RegistrationDate DATETIME NOT NULL,
+    CONSTRAINT FK_Waitlist_Employee FOREIGN KEY (EmployeeId) REFERENCES Employees(EmployeeId),
+    CONSTRAINT FK_Waitlist_Book FOREIGN KEY (BookISBN) REFERENCES Libraries(Isbn13)
+);
+
+
+
+
+
+
+
+
+CREATE TABLE Notifications (
+    NotificationId INT PRIMARY KEY IDENTITY(1,1),
+    UserId NVARCHAR(50) NOT NULL,
+    Message NVARCHAR(MAX) NOT NULL,
+    Timestamp DATETIME NOT NULL,
+    IsRead BIT NOT NULL DEFAULT 0,
+    CONSTRAINT FK_Notifications_User FOREIGN KEY (UserId) REFERENCES Users(UserId)
+);
+
+
+
+using System;
+using System.Linq;
+using System.Web.Mvc;
+using MyLibrary.Models;
+
+namespace MyLibrary.Controllers
+{
+    public class NotificationsController : Controller
+    {
+        private I_CoposEntities db = new I_CoposEntities();
+
+        public ActionResult Index()
+        {
+            var userId = "user123"; // Placeholder for user ID, retrieve it from session or wherever needed
+            var notifications = db.Notifications.Where(n => n.UserId == userId).OrderByDescending(n => n.Timestamp).ToList();
+            return View(notifications);
+        }
+
+        public ActionResult CreateNotification(string message)
+        {
+            var userId = "user123"; // Placeholder for user ID, retrieve it from session or wherever needed
+            var notification = new Notification
+            {
+                UserId = userId,
+                Message = message,
+                Timestamp = DateTime.Now
+            };
+            db.Notifications.Add(notification);
+            db.SaveChanges();
+            
+            // Optionally, you can also notify administrators about the new notification here
+            
+            return RedirectToAction("Index");
+        }
+    }
+}
+
+
+@model List<MyLibrary.Models.Notification>
+
+<h2>Notifications</h2>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Notification</th>
+            <th>Timestamp</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var notification in Model)
+        {
+            <tr>
+                <td>@notification.Message</td>
+                <td>@notification.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="form-group">
+    <label for="message">Send Notification:</label>
+    <input type="text" class="form-control" id="message" name="message">
+    <button type="button" class="btn btn-primary" id="sendNotification">Send</button>
+</div>
+
+<script>
+    $(function () {
+        $('#sendNotification').click(function () {
+            var message = $('#message').val();
+            $.post('@Url.Action("CreateNotification", "Notifications")', { message: message }, function () {
+                location.reload();
+            });
+        });
+    });
+</script>
+
