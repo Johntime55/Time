@@ -1,0 +1,72 @@
+// Controler BorrowBookController
+public ActionResult MyBorrowedBooks()
+{
+    var borrowedBooks = db.Barrow.ToList();
+
+    // Formatați datele înainte de a le trimite la view
+    foreach (var book in borrowedBooks)
+    {
+        book.BorrowDateFormatted = book.BorrowDate.ToString("yyyy-MM-dd HH:mm:ss");
+        book.ReturnDateFormatted = book.ReturnDate.HasValue
+            ? book.ReturnDate.Value.ToString("yyyy-MM-dd HH:mm:ss")
+            : "Not returned yet";
+    }
+
+    return View(borrowedBooks);
+}
+
+public class Barrow
+{
+    // ... alte proprietăți existente
+
+    public string BorrowDateFormatted { get; set; }
+    public string ReturnDateFormatted { get; set; }
+}
+
+@model List<yLibrary.Models.Barrow>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Borrowed Books</title>
+</head>
+<body>
+    <h2>My Borrowed Books</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>User Name</th>
+                <th>Book Name</th>
+                <th>ISBN</th>
+                <th>Borrow Date</th>
+                <th>Return Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var book in Model)
+            {
+                <tr>
+                    <td>@book.BorrowedBookId</td>
+                    <td>@book.UserId</td>
+                    <td>@book.BookName</td>
+                    <td>@book.BookISBN</td>
+                    <td>@book.BorrowDate.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td>
+                        @if (book.ReturnDate.HasValue)
+                        {
+                            @book.ReturnDate.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                        }
+                        else
+                        {
+                            <text>Not returned yet</text>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</body>
+</html>
+
+
