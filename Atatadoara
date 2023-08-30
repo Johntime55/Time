@@ -1,0 +1,80 @@
+public class WaitlistController : Controller
+{
+    private readonly YourDbContext _db = new YourDbContext(); // Schimbă "YourDbContext" cu numele contextului tău
+
+    public ActionResult Join()
+    {
+        return View();
+    }
+
+    [HttpPost]
+    public ActionResult Join(string isbn13)
+    {
+        if (string.IsNullOrEmpty(isbn13))
+        {
+            ViewBag.ErrorMessage = "ISBN-13 is required.";
+            return View();
+        }
+
+        var usrData = new UserInfo(); // Asigură-te că obții corect datele utilizatorului
+        var bookAvailable = _db.BooksAvailable.FirstOrDefault(b => b.Isbn13 == isbn13);
+
+        if (bookAvailable != null)
+        {
+            // Verifică dacă utilizatorul este deja pe lista de așteptare pentru această carte
+            var existingWaitlistEntry = _db.Waitlist.FirstOrDefault(w => w.BookISBN == isbn13 && w.UserId == usrData.Id);
+
+            if (existingWaitlistEntry != null)
+            {
+                ViewBag.ErrorMessage = "You are already on the waitlist for this book.";
+                return View();
+            }
+
+            var waitlistEntry = new Waitlist
+            {
+                UserId = usrData.Id,
+                BookISBN = isbn13,
+                RegistrationDate = DateTime.Now
+            };
+
+            _db.Waitlist.Add(waitlistEntry);
+            _db.SaveChanges();
+
+            ViewBag.SuccessMessage = "You have been added to the waitlist.";
+        }
+        else
+        {
+            ViewBag.ErrorMessage = "Book with this ISBN-13 is not available.";
+        }
+
+        return View();
+    }
+
+    [HttpPost]
+    public ActionResult ReturnBook(string isbn13)
+    {
+        if (string.IsNullOrEmpty(isbn13))
+        {
+            ViewBag.ErrorMessage = "ISBN-13 is required.";
+            return View("Index"); // Înlocuiește "Index" cu numele view-ului tău
+        }
+
+        var usrData = new UserInfo(); // Asigură-te că obții corect datele utilizatorului
+        var waitlistEntry = _db.Waitlist.FirstOrDefault(w => w.BookISBN == isbn13 && w.UserId == usrData.Id);
+
+        if (waitlistEntry != null)
+        {
+            waitlistEntry.ReturnDate = DateTime.Now;
+            _db.SaveChanges();
+
+            ViewBag.ReturnSuccessMessage = "Book returned successfully.";
+        }
+        else
+        {
+            ViewBag.ErrorMessage = "You are not in the waitlist for this book.";
+        }
+
+        return View("Index"); // Înlocuiește "Index" cu numele view-ului tău
+    }
+}
+￼Enter
