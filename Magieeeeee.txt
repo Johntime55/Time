@@ -1,0 +1,229 @@
+using System;
+using System.Linq;
+using System.Web.Mvc;
+using MyLibrary.Models;
+using System.Data.Entity;
+using System.Net;
+using MyLibrary.ADClasses;
+
+namespace MyLibrary.Controllers
+{
+    public class BorrowBookController : Controller
+    {
+        private I_CoposEntities db = new I_CoposEntities();
+        UserInfo user = new UserInfo();
+
+        public ActionResult MyBorrowedBooks()
+        {
+            if (user.isLoggedIn())
+            {
+                var borrowedBooks = db.Barrows.ToList();
+                foreach (var book in borrowedBooks)
+                {
+                    book.BorrowDateFormated = book.BorrowDate.HasValue
+                        ? book.BorrowDate.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                        : "Not returned yet";
+                    book.ReturnDateFormatted = book.ReturnDate.HasValue
+                        ? book.ReturnDate.Value.ToString("yyyy-MM-dd HH:mm:ss")
+                        : "Not returned yet";
+                }
+                return View(borrowedBooks);
+            }
+            else
+            {
+                return RedirectToAction("LoginPage", "Account");
+            }
+        }
+
+        public ActionResult ReturnBook(int borrowedBookId)
+        {
+            var borrowedBook = db.Barrows.Find(borrowedBookId);
+            if (borrowedBook != null)
+            {
+                borrowedBook.ReturnDate = DateTime.Now;
+                db.SaveChanges();
+            }
+            return RedirectToAction("MyBorrowedBooks");
+        }
+
+        public ActionResult ValidateReturn(int borrowedBookId)
+        {
+            var borrowedBook = db.Barrows.Find(borrowedBookId);
+            if (borrowedBook != null)
+            {
+                borrowedBook.IsValidated = true;
+                db.SaveChanges();
+            }
+            return RedirectToAction("MyBorrowedBooks");
+        }
+
+        [HttpGet]
+        public ActionResult Borrow()
+        {
+            ViewBag.ErrorMessage = TempData["ErrorMessage"];
+            ViewBag.SuccessMessage = TempData["SuccessMessage"];
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult Borrow(string isbn13)
+        {
+            if (string.IsNullOrEmpty(isbn13) || isbn13.Length != 13)
+            {
+                TempData["ErrorMessage"] = "ISBN-13 trebuie să aibă 13 cifre.";
+                return RedirectToAction("Borrow");
+            }
+
+            var book = db.Libraries.FirstOrDefault(b => b.Isbn13 == isbn13);
+            if (book == null)
+            {
+                TempData["ErrorMessage"] = "Cartea cu acest ISBN-13 nu există în bibliotecă.";
+                return RedirectToAction("Borrow");
+            }
+
+            if (user.isLoggedIn())
+            {
+                string currentUserId = getUserName();
+
+                if (book.QtyAvailable > 0)
+                {
+                    book.QtyAvailable--;
+
+                    Barrow borrowedBook = new Barrow
+                    {
+                        UserId = currentUserId,
+                        BookName = book.BookName,
+                        BookISBN = book.Isbn13,
+                        BorrowDate = DateTime.Now,
+                        ReturnDate = DateTime.Now.AddDays(14)
+                    };
+
+                    db.Barrows.Add(borrowedBook);
+                    db.SaveChanges();
+
+                    TempData["SuccessMessage"] = "Cartea a fost împrumutată cu succes!";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Cartea nu este disponibilă pentru împrumut.";
+                }
+
+                return RedirectToAction("Borrow");
+            }
+            else
+            {
+                return RedirectToAction("LoginPage", "Account");
+            }
+        }
+
+        public string getUserName()
+        {
+            UserInfo user = new UserInfo();
+            return user.getUsername();
+        }
+    }
+}
+
+@using MyLibrary.ADClasses
+@{ var usrData = new UserInfo(); }
+@model List<MyLibrary.Models.Barrow>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MyBorrowedBooks</title>
+</head>
+<body>
+    <h2>My Borrowed Books</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>UserName</th>
+                <th>BookName</th>
+                <th>ISBN</th>
+                <th>BorrowDate</th>
+                <th>ReturnDate</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var book in Model)
+            {
+                <tr>
+                    <td>@book.BorrowedBookId</td>
+                    <td>@book.UserId</td>
+                    <td>@book.BookName</td>
+                    <td>@book.BookISBN</td>
+                    <td>@book.BorrowDateFormated</td>
+                    <td>
+                        @if (book.ReturnDate.HasValue)
+                        {
+                            @book.ReturnDateFormatted
+                        }
+                        else
+                        {
+                            <text>Not returned yet</text>
+                        }
+                    </td>
+                    <td>
+                        @if (!book.ReturnDate.HasValue && !book.IsValidated)
+                        {
+                            <a href="@Url.Action("ReturnBook", "BorrowBook", new { borrowedBookId = book.BorrowedBookId })" class="btn btn-primary">Return</a>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</body>
+</html>
+
+
+SignOut
+Adaugă metoda pentru SignOut
+        public ActionResult SignOut()
+        {
+            var returnUrl = "~/Account/LoginPage"; // Modifică aici la calea dorită
+            userData.SignOut();
+            return Redirect(returnUrl);
+        }
+
+Layouy
+<div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="#">Home</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#">Link</a>
+        </li>
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Dropdown
+            </a>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#">Action</a></li>
+                <li><a class="dropdown-item" href="#">Another action</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#">Something else here</a></li>
+            </ul>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link disabled" aria-disabled="true">Disabled</a>
+        </li>
+    </ul>
+    <form class="d-flex" role="search">
+        <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+        <button class="btn btn-outline-success" type="submit">Search</button>
+    </form>
+    @if (User.Identity.IsAuthenticated)
+    {
+        <form id="logoutForm" action="@Url.Action("SignOut", "Account")" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-link nav-link">Sign Out</button>
+        </form>
+    }
+</div>
+
+
