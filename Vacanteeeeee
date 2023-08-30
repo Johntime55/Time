@@ -1,0 +1,50 @@
+@{
+    ViewBag.Title = "My Waitlist";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>
+    My Waitlist
+</h2>
+
+@if (Model.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Book Title</th>
+                <th>Author</th>
+                <th>ISBN-13</th>
+                <th>Registration Date</th>
+                <th>Return Date</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.BooksAvailable.BookName</td>
+                    <td>@item.BooksAvailable.Author</td>
+                    <td>@item.BookISBN</td>
+                    <td>@item.RegistrationDate.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td>@(item.ReturnDate != null ? item.ReturnDate.Value.ToString("yyyy-MM-dd HH:mm:ss") : "-")</td>
+                    <td>
+                        @if (item.ReturnDate == null)
+                        {
+                            using (Html.BeginForm("ReturnBook", "Waitlist", new { isbn13 = item.BookISBN }, FormMethod.Post))
+                            {
+                                <button type="submit" class="btn btn-primary">Return</button>
+                            }
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>You are not on the waitlist for any books.</p>
+}
+￼Enter
