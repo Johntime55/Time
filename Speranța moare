@@ -1,0 +1,276 @@
+using System;
+using System.Linq;
+using System.Web.Mvc;
+using YourApp.Models;
+
+namespace YourApp.Controllers
+{
+    public class WaitlistController : Controller
+    {
+        private ApplicationDbContext db = new ApplicationDbContext(); // Sau numele contextului tău
+
+        // Acțiune pentru afișarea listei de cărți disponibile în waitlist
+        public ActionResult Waitlist()
+        {
+            var availableBooks = db.BooksAvailables.ToList();
+            return View(availableBooks);
+        }
+
+        // Acțiune pentru adăugarea utilizatorului în waitlist
+        [Authorize]
+        public ActionResult JoinWaitlist(string bookISBN)
+        {
+            var currentUserId = User.Identity.GetUserId(); // Sau cum obții ID-ul utilizatorului
+
+            var existingWaitlistEntry = db.Waitlist.SingleOrDefault(w => w.UserId == currentUserId && w.BookISBN == bookISBN);
+            if (existingWaitlistEntry != null)
+            {
+                // Utilizatorul este deja în waitlist pentru această carte
+                return RedirectToAction("Waitlist");
+            }
+
+            var newWaitlistEntry = new Waitlist
+            {
+                UserId = currentUserId,
+                BookISBN = bookISBN,
+                RegistrationDate = DateTime.Now,
+                ReturnDate = null
+            };
+
+            db.Waitlist.Add(newWaitlistEntry);
+            db.SaveChanges();
+
+            // Redirecționează utilizatorul către pagina waitlist-ului
+            return RedirectToAction("Waitlist");
+        }
+    }
+}
+
+@model List<BookAvailable>
+
+<h2>Waitlist</h2>
+
+<table>
+    <tr>
+        <th>Book Title</th>
+        <th>Author</th>
+        <th>ISBN</th>
+        <th>Action</th>
+    </tr>
+    @foreach (var book in Model)
+    {
+        <tr>
+            <td>@book.BookName</td>
+            <td>@book.Author</td>
+            <td>@book.ISBN</td>
+            <td>
+                @using (Html.BeginForm("JoinWaitlist", "Waitlist"))
+                {
+                    @Html.Hidden("bookISBN", book.ISBN)
+                    <button type="submit">Join Waitlist</button>
+                }
+            </td>
+        </tr>
+using System;
+using System.Linq;
+using System.Web.Mvc;
+using YourApp.Models;
+
+namespace YourApp.Controllers
+{
+    public class WaitlistController : Controller
+    {
+        private ApplicationDbContext db = new ApplicationDbContext(); // Sau numele contextului tău
+
+        // Acțiune pentru afișarea listei de cărți disponibile în waitlist
+        public ActionResult Waitlist()
+        {
+            var availableBooks = db.BooksAvailables.ToList();
+            return View(availableBooks);
+        }
+
+        // Acțiune pentru adăugarea utilizatorului în waitlist
+        [Authorize]
+        public ActionResult JoinWaitlist(string bookISBN)
+        {
+            var currentUserId = User.Identity.GetUserId(); // Sau cum obții ID-ul utilizatorului
+
+            var existingWaitlistEntry = db.Waitlist.SingleOrDefault(w => w.UserId == currentUserId && w.BookISBN == bookISBN);
+            if (existingWaitlistEntry != null)
+            {
+                // Utilizatorul este deja în waitlist pentru această carte
+                return RedirectToAction("Waitlist");
+            }
+
+            var newWaitlistEntry = new Waitlist
+            {
+                UserId = currentUserId,
+                BookISBN = bookISBN,
+                RegistrationDate = DateTime.Now,
+                ReturnDate = null
+            };
+
+            db.Waitlist.Add(newWaitlistEntry);
+            db.SaveChanges();
+
+            // Redirecționează utilizatorul către pagina waitlist-ului
+            return RedirectToAction("Waitlist");
+        }
+    }
+}
+
+@model List<BookAvailable>
+
+<h2>Waitlist</h2>
+
+<table>
+    <tr>
+        <th>Book Title</th>
+        <th>Author</th>
+        <th>ISBN</th>
+        <th>Action</th>
+    </tr>
+    @foreach (var book in Model)
+    {
+        <tr>
+            <td>@book.BookName</td>
+            <td>@book.Author</td>
+            <td>@book.ISBN</td>
+            <td>
+                @using (Html.BeginForm("JoinWaitlist", "Waitlist"))
+                {
+                    @Html.Hidden("bookISBN", book.ISBN)
+                    <button type="submit">Join Waitlist</button>
+                }
+            </td>
+        </tr>
+    }
+</table>
+
+
+
+using System;
+using System.Linq;
+using System.Web.Mvc;
+using MyLibrary.Models;
+
+namespace MyLibrary.Controllers
+{
+    public class WaitlistController : Controller
+    {
+        private MyLibraryEntities db = new MyLibraryEntities(); // Verificați dacă denumirea entității este corectă
+
+        public ActionResult Waitlist()
+        {
+            var booksAvailable = db.BooksAvailables.ToList();
+            return View(booksAvailable);
+        }
+
+        [HttpPost]
+        public ActionResult JoinWaitlist(string bookISBN)
+        {
+            if (!string.IsNullOrEmpty(bookISBN))
+            {
+                var book = db.BooksAvailables.FirstOrDefault(b => b.Isbn13 == bookISBN);
+                if (book != null)
+                {
+                    if (User.Identity.IsAuthenticated)
+                    {
+                        var currentUserId = User.Identity.Name;
+                        var existingWaitlist = db.Waitlist.FirstOrDefault(w => w.UserId == currentUserId && w.BookISBN == bookISBN);
+                        if (existingWaitlist == null)
+                        {
+                            var waitlistEntry = new Waitlist
+                            {
+                                UserId = currentUserId,
+                                BookISBN = bookISBN,
+                                RegistrationDate = DateTime.Now,
+                                ReturnDate = null // Inițializăm cu null pentru că nu avem încă o dată de returnare
+                            };
+                            db.Waitlist.Add(waitlistEntry);
+                            db.SaveChanges();
+                        }
+                        return RedirectToAction("Waitlist");
+                    }
+                    else
+                    {
+                        return RedirectToAction("Login", "Account");
+                    }
+                }
+            }
+            return RedirectToAction("Waitlist");
+        }
+    }
+}
+
+@model List<MyLibrary.Models.BooksAvailable>
+
+<h2>Waitlist for Books</h2>
+
+@foreach (var book in Model)
+{
+    <div>
+        <h3>@book.BookName</h3>
+        <p>@book.Author</p>
+        <p>@book.Isbn13</p>
+        <p>Available: @book.QtyAvailable</p>
+        <form method="post" action="@Url.Action("JoinWaitlist", "Waitlist")">
+            @Html.AntiForgeryToken()
+            @Html.Hidden("bookISBN", book.Isbn13)
+            <button type="submit">Join Waitlist</button>
+        </form>
+    </div>
+}
+
+￼Enter    }
+</table>
+
+
+
+using System;
+using System.Linq;
+using System.Web.Mvc;
+using MyLibrary.Models;
+
+namespace MyLibrary.Controllers
+{
+    public class WaitlistController : Controller
+    {
+        private MyLibraryEntities db = new MyLibraryEntities(); // Verificați dacă denumirea entității este corectă
+
+        public ActionResult Waitlist()
+        {
+            var booksAvailable = db.BooksAvailables.ToList();
+            return View(booksAvailable);
+        }
+
+        [HttpPost]
+        public ActionResult JoinWaitlist(string bookISBN)
+        {
+            if (!string.IsNullOrEmpty(bookISBN))
+      {
+                var book = db.BooksAvailables.FirstOrDefault(b => b.Isbn13 == bookISBN);
+                if (book != null)
+                {
+                    if (User.Identity.IsAuthenticated)
+                    {
+                        var currentUserId = User.Identity.Name;
+                        var existingWaitlist = db.Waitlist.FirstOrDefault(w => w.UserId == currentUserId && w.BookISBN == bookISBN);
+                        if (existingWaitlist == null)
+                        {
+                            var waitlistEntry = new Waitlist
+                            {
+                                UserId = currentUserId,
+                                BookISBN = bookISBN,
+                                RegistrationDate = DateTime.Now,
+                                ReturnDate = null // Inițializăm cu null pentru că nu avem încă o dată de returnare
+                            };
+                            db.Waitlist.Add(waitlistEntry);
+                            db.SaveChanges();
+                        }
+                        return RedirectToAction("Waitlist");
+                    }
+                    else
+                    {
+                        return RedirectToAction("Login", "Account");
+                    }
