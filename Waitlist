@@ -1,0 +1,95 @@
+using System;
+using System.Linq;
+using System.Web.Mvc;
+using MyLibrary.Models;
+using MyLibrary.ADClasses; // Asigurați-vă că adăugați namespace-ul corespunzător pentru autentificare
+
+namespace MyLibrary.Controllers
+{
+    public class WaitlistController : Controller
+    {
+        private I_CoposEntities db = new I_CoposEntities();
+        private UserInfo user = new UserInfo(); // Asigurați-vă că aveți obiectul UserInfo pentru autentificare
+
+        // GET: Waitlist
+        public ActionResult Index()
+        {
+            return View();
+        }
+
+        // POST: Waitlist/Join
+        [HttpPost]
+        public ActionResult Join(string isbn13)
+        {
+            if (string.IsNullOrEmpty(isbn13) || isbn13.Length != 13)
+            {
+                TempData["ErrorMessage"] = "ISBN-13 trebuie să aibă 13 cifre.";
+                return RedirectToAction("Index");
+            }
+
+            var book = db.Libraries.FirstOrDefault(b => b.Isbn13 == isbn13);
+            if (book == null)
+            {
+                TempData["ErrorMessage"] = "Cartea cu acest ISBN-13 nu există în bibliotecă.";
+                return RedirectToAction("Index");
+            }
+
+            if (user.isLoggedIn())
+            {
+                string currentUserId = user.getUsername();
+
+                // Verificați dacă utilizatorul este deja pe lista de așteptare pentru această carte
+                bool isAlreadyWaitlisted = db.Waitlist.Any(w => w.UserId == currentUserId && w.BookISBN == book.Isbn13);
+                if (isAlreadyWaitlisted)
+                {
+                    TempData["ErrorMessage"] = "Sunteți deja în lista de așteptare pentru această carte.";
+                    return RedirectToAction("Index");
+                }
+
+                Waitlist waitlistEntry = new Waitlist
+                {
+                    UserId = currentUserId,
+                    BookISBN = book.Isbn13,
+                    RegistrationDate = DateTime.Now
+                };
+
+                db.Waitlist.Add(waitlistEntry);
+                db.SaveChanges();
+
+                TempData["SuccessMessage"] = "Ați fost adăugat în lista de așteptare pentru această carte!";
+            }
+            else
+            {
+                return RedirectToAction("LoginPage", "Account");
+            }
+
+            return RedirectToAction("Index");
+        }
+    }
+}
+
+@{
+    ViewBag.Title = "Waitlist";
+}
+
+<h2>Join the Waitlist</h2>
+@if (!string.IsNullOrEmpty(TempData["ErrorMessage"] as string))
+{
+    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+}
+@if (!string.IsNullOrEmpty(TempData["SuccessMessage"] as string))
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+@using (Html.BeginForm("Join", "Waitlist", FormMethod.Post))
+{
+    <div class="form-group">
+        @Html.Label("ISBN-13:")
+        @Html.TextBox("isbn13", null, new { @class = "form-control" })
+        @Html.ValidationMessage("isbn13", "", new { @class = "text-danger" })
+    </div>
+    <button type="submit" class="btn btn-primary">Join Waitlist</button>
+}
+
+￼Enter
