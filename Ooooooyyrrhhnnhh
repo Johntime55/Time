@@ -1,0 +1,57 @@
+@{
+    ViewBag.Title = "Join";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>
+    Bine ai venit!
+    WaitList
+</h2>
+
+<p>
+    @Html.ActionLink("Join", "Join", "Waitlist")
+</p>
+
+@if (!string.IsNullOrEmpty(ViewBag.ErrorMessage))
+{   
+    <div class="alert alert-danger">
+        @ViewBag.ErrorMessage
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(ViewBag.SuccessMessage))
+{
+    <div class="alert alert-success">
+        @ViewBag.SuccessMessage
+    </div>
+}
+
+@using (Html.BeginForm())
+{
+    <div class="form-group">
+        @Html.Label("ISBN-13:")
+        @Html.TextBox("isbn13", null, new { @class = "form-control" })
+        @Html.ValidationMessage("isbn13", "", new { @class = "text-danger" })
+    </div>
+
+    <button type="submit" class="btn btn-primary">Join</button>
+}
+
+@if (!string.IsNullOrEmpty(ViewBag.ReturnSuccessMessage))
+{
+    <div class="alert alert-success">
+        @ViewBag.ReturnSuccessMessage
+    </div>
+}
+
+@using (Html.BeginForm("ReturnBook", "Waitlist", FormMethod.Post))
+{
+    <div class="form-group">
+        @Html.Label("ISBN-13:")
+        @Html.TextBox("isbn13", null, new { @class = "form-control" })
+        @Html.ValidationMessage("isbn13", "", new { @class = "text-danger" })
+    </div>
+
+    <button type="submit" class="btn btn-primary">Return</button>
+}
+￼Enter
